@@ -1,0 +1,56 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <title></title>
+</head>
+<script src="/js/jquery-1.7.1.min.js" type="text/javascript"></script>
+<body>
+<div id="output">Output of results</div>
+<hr/>
+<a href="#"><div id="addUser">Add User</div></a>
+<a href="#"><div id="getUser">Get User</div></a>
+<a href="#"><div id="loginToFoursquare">Login to Foursquare</div></a>
+
+<script type="text/javascript">
+    $(document).ready(function(){
+        $('#loginToFoursquare').click(function(event) {
+            alert("attempting to get response for foursquare");
+            $.ajax({
+                url : "/foursquare/oauth",
+                dataType : "json",
+                type : "GET",
+                success : function(result) {
+                    alert("got response for foursquare params");
+                    var fqUri = "https://foursquare.com/oauth2/authenticate?client_id=" + result.clientId
+                        + "&response_type=token&redirect_uri=" + result.fqRedirectUri;
+                    $('#output').html("attempting to redirect to " + fqUri);
+                }
+            });
+        } );
+        $('#addUser').click(function(event) {
+            $.ajax({
+                url : "/api/users/testid",
+                dataType : "json",
+                type : "POST",
+                success : function(result) {
+                    alert("data=" + JSON.stringify(result));
+                    $('#output').html("Sucessfully added user");
+                }
+            });
+        } );
+        $('#getUser').click(function(event) {
+            $.ajax({
+                url : "/api/users/testid",
+                dataType : "json",
+                type : "GET",
+                success : function(result) {
+                    alert("data=" + JSON.stringify(result));
+                    $('#output').html("get user");
+                }
+            });
+         });
+    });
+</script >
+</body>
+</html>
