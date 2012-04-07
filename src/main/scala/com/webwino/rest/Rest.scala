@@ -3,93 +3,87 @@ package com.webwino.rest
 import java.net.URLEncoder
 
 import cc.spray._
-import cc.spray.json._
+import net.liftweb.json._
 import directives.Remaining
 import cc.spray.utils.Logging
 
-import com.webwino.models.User
+import com.webwino.markit.MarkitApi
+import com.webwino.models.Company
 
 trait Rest extends Directives with Logging {
   object resultCodes {
-    val success = JsNumber(200)
-    val userNotCreated = JsNumber(201)
-    val failure = JsNumber(400)
-    val idNotFound = JsNumber(401)
-    val duplicateId = JsNumber(402)
+    val success = JInt(200)
+    val failure = JInt(400)
   }
-
-  private val fqClientId:String = "CW14C1TQVGHFR2CMXWWLJPFUSZNWE00P52BZAC2WPGFPGEK4"
-  private val fqRedirectUri:String = URLEncoder.encode("http://localhost:8080/foursquare/callback", "UTF-8")
   
   val restService = {
     path("test") {
-      get { _.complete("Say hello to Spray!") }
+      get { _.complete("Simple REST Service Test") }
     } ~
-    path ("foursquare" / "oauth") {
+    path ("api" / "search") {
       get { ctx => ( {
-        log.debug("returning foursquare params")
-        ctx.complete(
-          JsObject(Map("resultCode" -> resultCodes.success,
-            "clientId" -> JsString(fqClientId),
-            "callbackUri" -> JsString(fqRedirectUri)))
-          .toString())
+        log.debug("Performing symbol list")
+        
+        //create a dsl representing 
+        val resultDSL = (
+          "resultCode" -> resultCodes.success ~
+            "companies" -> Company.getAllCompanies() map ( (company:Company) => ( company.symbol -> company.companyName) )
+          )
+        ctx.complete(render(resultDSL))
       } ) }
     } ~
-    path ("foursquare" / "oauth" / Remaining) { token =>
-      post { ctx => ( {
-        User.fromAccessToken(token) match {
-          case Some(user:User) => ( {
-            JsObject(Map("resultCode" -> resultCodes.success) ++ user.toJson.fields)
-          })
-          case None => {
-            JsObject("resultCode" -> resultCodes.userNotCreated)
-          }
-        }
-      })
-      }
-    } ~
-    path("api" / "users" / Remaining) { id =>
-      get { ctx => ( {
-        ctx.complete( (
-          User.fromDb(id) match {
-            case Some(user:User) => ( {
-              val jsUser = user.toJson
-              JsObject(Map("resultCode" -> resultCodes.success) ++ jsUser.fields)
-            })
-            case None => {
-              JsObject("resultCode" -> resultCodes.idNotFound)
+      path ("api" / "search" / "symbol" / Remaining) { token =>
+        get { ctx => ( {
+          log.debug("Performing symbol lookup")
+          
+          val companies = Company.queryBySymbol(token)
+          
+          val companyList = companies match {
+            case Nil => {
+              //No matches in our database, use the markit api for lookup, filtering matches by company name
+              val possibles = MarkitApi.lookup(token) filter ( _.symbol contains token)
+              MarkitActor ! RetrieveBySymbolList(possibles)
+              //use the Markit API for lookup
+              val sortedUniqueCompanies = possibles groupBy(_.symbol) map(_._2.head) sort( (e1,e2) => (e1.symbol < e2.symbol))
+              sortedUniqueCompanies map ( (company:Company) => (company.symbol -> company.companyName))
             }
+            case _ => companies map ( (company:Company) => ( company.symbol -> company.companyName))
           }
-        ).toString() )
-      } ) } ~
-      put { ctx => ({
-        User.fromDb(id) match {
-          case Some(_) => ctx.complete(JsObject("resultCode" -> resultCodes.duplicateId).toString())
-          case None => ( {
-            val user = new User(id)
-            User.toDb(user)
-            ctx.complete(JsObject("resultCode" -> resultCodes.success).toString())
-          })
-        }
-      })} ~
-      post { ctx => ( {
-        User.fromDb(id) match {
-          case Some(_) => ctx.complete(JsObject("resultCode" -> resultCodes.success).toString())
-          case None => ( {
-            ctx.complete(JsObject("resultCode" -> resultCodes.idNotFound).toString())
-          })
-        }
-      } ) } ~
-        delete { ctx => ( {
-          User.fromDb(id) match {
-            case Some(user) => ( {
-              User.delete(user)
-              ctx.complete(JsObject("resultCode" -> resultCodes.success).toString())
-            } )
-            case None => ctx.complete(JsObject("resultCode" -> resultCodes.idNotFound).toString())
-          }
+
+          //create a dsl representing
+          val resultDSL = (
+            "resultCode" -> resultCodes.success ~
+              "companies" -> companyList
+            )
+          ctx.complete(render(resultDSL))
         } ) }
-    }
+      } ~
+      path ("api" / "search" / "company" / Remaining) { token =>
+        get { ctx => ( {
+          log.debug("Performing company lookup")
+
+          val companies = Company.queryByCompany(token)
+
+          val companyList = companies match {
+            case Nil => {
+              //No matches in our database, use the markit api for lookup, filtering matches by company name
+              val possibles = MarkitApi.lookup(token) filter ( _.companyName contains token)
+              MarkitActor ! RetrieveByCompanyLookup(possibles)
+              //use the Markit API for lookup
+              val sortedUniqueCompanies = possibles groupBy(_.symbol) map(_._2.head) sort( (e1,e2) => (e1.symbol < e2.symbol))
+              sortedUniqueCompanies map ( (company:Company) => (company.symbol -> company.companyName))
+            }
+            case _ => companies map ( (company:Company) => ( company.symbol -> company.companyName))
+          }
+
+          //create a dsl representing
+          val resultDSL = (
+            "resultCode" -> resultCodes.success ~
+              "companies" -> companyList
+            )
+          ctx.complete(render(resultDSL))
+        } ) }
+      }
   }
   
 }

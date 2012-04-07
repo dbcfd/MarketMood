@@ -5,48 +5,66 @@ import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.Imports._
 
 import com.webwino.mongo.Mongo
-import cc.spray.json._
+import net.liftweb.json._
 
-class User(val dbObject:MongoDBObject) {
-  def this(fqId:String) = this(MongoDBObject("foursquareId" -> fqId))
-  def foursquareId:String = dbObject.as[String]("foursquareId")
-  def accessToken:String = dbObject.as[String]("accessToken")
+/**
+ * Wrapper around the database object for each company
+ * @param dbObject Mongo object to create wrapper from
+ */
+class Company(val dbObject:MongoDBObject) {
+  def this(sym:String, name:String, exchanges:List[String}) = this(MongoDBObject(
+    "symbol" -> sym,
+    "companyName" -> name,
+    "exchanges" -> exchanges
+  ))
+  def symbol:String = dbObject.as[String]("symbol")
+  def companyName:String = dbObject.as[String]("companyName")
+  def exchanges:List[String] = dbObject.as[List[String]]("exchanges")
   def id:ObjectId = dbObject.as[ObjectId]("_id")
-
-  def toJson = JsObject("_id" -> JsString(id.toString()), "foursquareId" -> JsString(foursquareId))
 }
 
-object User {
-  val collection = Mongo.userCollection
+/**
+ * Companion class used to perform database access
+ */
+object Company {
+  val collection = Mongo.companyCollection
+
+  /**
+   * Get all possible companies in the database
+   * @return
+   */
+  def getAllCompanies():List[(String,String)] = {
+    val findAll = MongoDBObject("_id" -> 1)
+    val companies = collection.find(findAll)
+    companies map ( (obj:DBObject) => new Company(obj))
+  }
   
-  def fromDb(foursquareId:String):Option[User] = {
-    val dbUser = MongoDBObject("foursquareId" -> foursquareId)
+  def queryBySymbol(symbol:String):List[(String,String)] = {
+    val q = "symbol" $like symbol
+    val companies = collection.find(q))
+    companies map ( (obj:DBObject) => new Company(obj))
+  }
+
+  def queryByCompanyName(name:String):List[(String,String)] = {
+    val q = "name" $like symbol
+    val companies = collection.find(q))
+    companies map ( (obj:DBObject) => new Company(obj))
+  }
+
+  /**
+   * Retrieve a specific company based on its symbol
+   * @param symbol
+   * @return
+   */
+  def fromDb(symbol:String):Option[Company] = {
+    val dbUser:MongoDBObject = MongoDBObject("symbol" -> symbol)
     val found = collection.findOne(dbUser)
     found match {
       case Some(obj:DBObject) => ({
-        Some(new User(obj))
+        Some(new Company(obj))
       } )
       case None => None
     }
-  }
-
-  def fromAccessToken(accessToken:String):Option[User] = {
-    val dbUser = MongoDBObject("accessToken" -> accessToken)
-    val found = collection.findOne(dbUser)
-    found match {
-      case Some(obj:DBObject) => ({
-        Some(new User(obj))
-      } )
-      case None => None
-    }
-  }
-
-  def fromJson(v:JsValue) = v.asJsObject.getFields("foursquareId") match {
-    case Seq(JsString(foursquareId)) => ( {
-      val dbObj = MongoDBObject("foursquareId" -> foursquareId)
-      new User(dbObj)
-    } )
-    case _ => deserializationError("Incorrect format:" + v.toString())
   }
 
   def toDb(user:MongoDBObject) = {
@@ -56,7 +74,10 @@ object User {
   def delete(user:MongoDBObject) = {
     collection.remove(user)
   }
-  
-  implicit def dbToUser(dbObj:MongoDBObject):User = new User(dbObj)
-  implicit def userToDb(user:User):MongoDBObject = user.dbObject
+
+  /**
+   * Implicits to handle conversion between wrappers and database objects
+   */
+  implicit def dbToCompany(dbObj:MongoDBObject):Company = new Company(dbObj)
+  implicit def companyToDb(obj:Company):MongoDBObject = obj.dbObject
 }

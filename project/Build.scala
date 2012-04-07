@@ -23,7 +23,8 @@ object Build extends sbt.Build {
         Compile.jodaTime,
         Compile.jodaConvert,
         Compile.casbah,
-        Compile.sprayJson,
+        Compile.liftJson,
+        Compile.apacheHttp,
         Test.specs2,
         Container.jettyWebApp,
         Container.akkaSlf4j,
@@ -51,7 +52,8 @@ object Dependencies {
     val jodaTime = "2.0"
     val jodaConvert = "1.2"
     val casbah = "2.1.5-1"
-    val sprayJson = "1.1.0"
+    val liftJson = "2.4"
+    val apacheHttp = "3.1"
   }
 
   object Compile {
@@ -61,7 +63,8 @@ object Dependencies {
     val jodaTime    = "joda-time"                 %  "joda-time"       % V.jodaTime    % "compile"
     val jodaConvert = "org.joda"                  %  "joda-convert"    % V.jodaConvert % "compile"
     val casbah      = "com.mongodb.casbah"        %  "casbah_2.9.1"    % V.casbah      % "compile"
-    val sprayJson   = "cc.spray"                  %%  "spray-json"     % V.sprayJson   % "compile"
+    val liftJson   = "net.liftweb"                  %%  "lift-json"     % V.liftJson   % "compile"
+    val apacheHttp  = "commons-httpclient"        % "commons-httpclient" % V.apacheHttp % "compile"
   }
 
   object Test {
