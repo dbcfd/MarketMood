@@ -6,6 +6,7 @@ import net.liftweb.json._
 import net.liftweb.json.JsonParser.ParseException
 import java.io._
 import scala.io.Source
+import akka.dispatch.Future
 
 case class MarkitError(Message:String)
 case class QuoteResult(Name:String, Symbol:String, LastPrice:Double, Timestamp:String, High:Double, Low:Double, Open:Double)
@@ -22,6 +23,26 @@ object MarkitApi {
   val client = new HttpClient()
 
   /**
+   * Read all data from a stream into an Array[Byte], from Lift IoHelpers
+   */
+  def readWholeStream(in: InputStream): Array[Byte] = {
+    val bos = new ByteArrayOutputStream
+    val ba = new Array[Byte](4096)
+
+    def readOnce {
+      val len = in.read(ba)
+      if (len > 0) bos.write(ba, 0, len)
+      if (len >= 0) readOnce
+    }
+
+    readOnce
+
+    in.close
+
+    bos.toByteArray
+  }
+
+  /**
    * Perform Lookup API function
    * @param symbolOrCompanyPartName MultiSearch object (indicated by OR) matching either symbol or a portion of the
    * company name
@@ -32,12 +53,16 @@ object MarkitApi {
     val apiUrl = "http://dev.markitondemand.com/Api/Lookup/json?input=" + symbolOrCompanyPartName
     val method = new GetMethod(apiUrl)
     client.executeMethod(method)
+    val responseAsByteArray = readWholeStream(method.getResponseBodyAsStream())
+    method.releaseConnection()
+    val responseAsString = new String(responseAsByteArray)
     try {
-      val rspJson:JValue = parse(method.getResponseBodyAsString())
+      val rspJson:JValue = parse(responseAsString)
       for(rspObj <- rspJson.children) yield rspObj.extract[LookupResult]
     }
     catch {
       case ex: MappingException => ( {
+        
         //rather than returning an error code, markit returns an error response
         //grab the error so we can log it
         //JsonParser.parse(response).extract[MarkitError]
@@ -63,8 +88,11 @@ object MarkitApi {
     val apiUrl = "http://dev.markitondemand.com/Api/Quote/json?symbol=" + symbol
     val method = new GetMethod(apiUrl)
     client.executeMethod(method)
+    val responseAsByteArray = readWholeStream(method.getResponseBodyAsStream())
+    method.releaseConnection()
+    val responseAsString = new String(responseAsByteArray)
     try {
-      val rspJson:JValue = parse(method.getResponseBodyAsString())
+      val rspJson:JValue = parse(responseAsString)
       Some( (rspJson \ "Data").extract[QuoteResult] )
     }
     catch {
@@ -72,7 +100,6 @@ object MarkitApi {
         //rather than returning an error code, markit returns an error response
         //grab the error so we can log it
         //JsonParser.parse(response).extract[MarkitError]
-        val what = ex.getMessage()
         None
       } )
       case ex: ParseException => ( {
@@ -95,8 +122,11 @@ object MarkitApi {
     val apiUrl = "http://dev.markitondemand.com/Api/Timeseries/json?symbol=" + symbol + "&duration=" + duration
     val method = new GetMethod(apiUrl)
     client.executeMethod(method)
+    val responseAsByteArray = readWholeStream(method.getResponseBodyAsStream())
+    method.releaseConnection()
+    val responseAsString = new String(responseAsByteArray)
     try {
-      val rspJson:JValue = parse(method.getResponseBodyAsString())
+      val rspJson:JValue = parse(responseAsString)
       Some( (rspJson \ "Data").extract[TimeSeriesResult])
     }
     catch {

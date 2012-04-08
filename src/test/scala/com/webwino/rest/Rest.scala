@@ -25,68 +25,84 @@ class RestServiceSpec extends Specification with SprayTest with Rest {
         restService
       }.response.content.as[String] must new CodeResultMatcher(resultCodes.success)
     }
-    "return a success code response and GM JsonObject for GET requests to the api/search/GM" in {
-      testService(HttpRequest(GET, "/api/users/GM")) {
+    "return a success code response and GM JsonObject for GET requests to the api/search/symbol/GM" in {
+      testService(HttpRequest(GET, "/api/search/symbol/GM")) {
         restService
       }.response.content.as[String] must new JsonResultMatcher(
         ("resultCode" -> 200) ~
-        ("symbol" -> "GM") ~
-        ("exchanges" -> (
-          "NYSE",
-          "BATS"
-        ) ) ~
-        ("companyName" -> "General Motors")
-        )
-      }
+          ("symbol" -> "GM") ~
+          ("exchanges" ->(
+            "NYSE",
+            "BATS Trading Inc"
+            )) ~
+          ("companyName" -> "General Motors")
+      )
     }
+    "return a success code response and GM JsonObject for GET requests to the api/search/company/lithia" in {
+      testService(HttpRequest(GET, "/api/search/company/lithia")) {
+        restService
+      }.response.content.as[String] must new JsonResultMatcher(
+        ("resultCode" -> 200) ~
+          ("symbol" -> "LAD") ~
+          ("exchanges" ->(
+            "NYSE",
+            "BATS Trading Inc"
+            )) ~
+          ("companyName" -> "Lithia Motors Inc")
+      )
+    }
+  }
 
-    class JsonResultMatcher(val expJObj: JObject) extends Matcher[Either[DeserializationError, String]] {
-      def apply[S <: Either[DeserializationError, String]](s: Expectable[S]) = {
-        s.value match {
-          case e: Right[_, _] => {
-            val str: String = e.right.get
-            val jObj: JValue = JsonParser.parse(str)
-            val Diff(changed, added, deleted) = expJObj diff jObj
-            changed match {
-              case JNothing => {
-                result(true,
-                  "Response " + str + " is " + expJObj.toString(),
-                  "Response " + str + " is not " + expJObj.toString(),
-                  s)
-              }
-              case _ => {
-                result(false,
-                  "Response " + str + " is " + expJObj.toString(),
-                  "Response " + str + " is not " + expJObj.toString(),
-                  s)
-              }
+  class JsonResultMatcher(val expJObj: JObject) extends Matcher[Either[DeserializationError, String]] {
+    def apply[S <: Either[DeserializationError, String]](s: Expectable[S]) = {
+      s.value match {
+        case e: Right[_, _] => {
+          val str: String = e.right.get
+          val jObj: JValue = JsonParser.parse(str)
+          val Diff(changed, added, deleted) = expJObj diff jObj
+          changed match {
+            case JNothing => {
+              result(true,
+                "Response " + str + " is " + expJObj.toString(),
+                "Response " + str + " is not " + expJObj.toString(),
+                s)
             }
-          }
-        }
-      }
-    }
-
-    class CodeResultMatcher(val resultCode: JInt) extends Matcher[Either[DeserializationError, String]] {
-      def apply[S <: Either[DeserializationError, String]](s: Expectable[S]) = {
-        s.value match {
-          case e: Right[_, _] => {
-            val str: String = e.right.get
-            str match {
-              case codeResultParser(code) => {
-                result(resultCode.toString().equals(code),
-                  "Response " + str + " with resultCode " + code + " is " + resultCode,
-                  "Response " + str + " with resultCode " + code + " is not " + resultCode,
-                  s)
-              }
-              case _ => {
-                result(false,
-                  "Should never be displayed",
-                  "Response code not found: " + s.value.toString(),
-                  s)
-              }
+            case _ => {
+              result(false,
+                "Response " + str + " is " + expJObj.toString(),
+                "Response " + str + " is not " + expJObj.toString(),
+                s)
             }
           }
         }
       }
     }
   }
+
+  class CodeResultMatcher(val resultCode: JInt) extends Matcher[Either[DeserializationError, String]] {
+    implicit val formats = DefaultFormats
+
+    def apply[S <: Either[DeserializationError, String]](s: Expectable[S]) = {
+      s.value match {
+        case e: Right[_, _] => {
+          val str: String = e.right.get
+          str match {
+            case codeResultParser(code) => {
+              result(resultCode.extract[String] equals code,
+                "Response " + str + " with resultCode " + code + " is " + resultCode,
+                "Response " + str + " with resultCode " + code + " is not " + resultCode,
+                s)
+            }
+            case _ => {
+              result(false,
+                "Should never be displayed",
+                "Response code not found: " + s.value.toString(),
+                s)
+            }
+          }
+        }
+      }
+    }
+  }
+
+}

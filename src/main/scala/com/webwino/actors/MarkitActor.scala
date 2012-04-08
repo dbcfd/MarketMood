@@ -10,6 +10,16 @@ sealed trait MarkitActorMessage
 case class RetrieveBySymbolList(results:List[LookupResult]) extends MarkitActorMessage
 case class RetrieveBySymbol(company:Company) extends MarkitActorMessage
 
+class MarkitWorker extends Actor {
+  def receive = {
+    //handle our database write and queue up the data extraction for prices
+    case RetrieveBySymbol(company) => {
+      Company.toDb(company)
+      //queue up our data extraction
+    }
+  }
+}
+
 class MarkitActor() extends Actor {
   private val nbWorkers:Int = 10
   private val workerRouter = context.actorOf(Props[MarkitWorker].withRouter(RoundRobinRouter(nbWorkers)), name = "workerRouter")
@@ -28,16 +38,6 @@ class MarkitActor() extends Actor {
       })
     }
 
-  }
-
-  class MarkitWorker extends Actor {
-    def receive = {
-      //handle our database write and queue up the data extraction for prices
-      case RetrieveBySymbol(company) => {
-        Company.toDb(company)
-        //queue up our data extraction
-      }
-    }
   }
 }
 
