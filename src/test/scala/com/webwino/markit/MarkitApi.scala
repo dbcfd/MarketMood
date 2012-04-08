@@ -1,78 +1,30 @@
-package com.webwino.rest
+package com.webwino.markit
 
 import org.specs2.mutable._
-import cc.spray._
-import test._
-import http._
-import HttpMethods._
-import cc.spray.typeconversion._
-import org.specs2.specification.{Given, When,  Then}
-import org.specs2.matcher._
-import scala.util.matching.Regex
+import cc.spray.test.SprayTest
 
-class RestServiceSpec extends Specification with SprayTest with Rest with SprayJsonSupport {
-  val resultParser = new Regex(""".*\"resultCode\"[.]*?:[.]*?(\d+).*""")
-  class ResultMatcher(val resultCode:JInt) extends Matcher[Either[DeserializationError, String]] {
-    def apply[S <: Either[DeserializationError,String]](s: Expectable[S]) = { s.value match {
-      case e:Right[_,_] => {
-        val str:String = e.right.get
-        str match {
-          case resultParser(code) => {
-            result(resultCode.toString().equals(code),
-              "Response " + str + " with resultCode " + code + " is " + resultCode,
-              "Response " + str + " with resultCode " + code + " is not " + resultCode,
-              s)
-          }
-          case _ => {
-            result(false,
-              "Should never be displayed",
-              "Response code not found: " + s.value.toString(),
-              s)
-          }
-        }
-      }
-    }}
-  }
-  "The RestService" should {
-    "return a greeting for GET requests to the test path" in {
-      testService(HttpRequest(GET, "/test")) {
-        restService
-      }.response.content.as[String] mustEqual Right("Say hello to Spray!")
+class MarkitApiSpec extends Specification with SprayTest {
+  "The MarkitAPI" should {
+    "return a set of symbols for the query GM" in {
+      MarkitApi.lookup("GM") must not be empty
     }
-    "return a success response for GET requests to the foursquare/oauth path" in {
-      testService(HttpRequest(GET, "/foursquare/oauth")) {
-        restService
-      }.response.content.as[String] must new ResultMatcher(resultCodes.success)
+    "return no symbols for the query xqzrp" in {
+      MarkitApi.lookup("xqzrp") must be empty
     }
-    "return a success response for GET requests to the api/users/testid path" in {
-      testService(HttpRequest(GET, "/api/users/testid")) {
-        restService
-      }.response.content.as[String] must new ResultMatcher(resultCodes.success)
+    "return a quote for the query AAPL" in {
+      MarkitApi.quote("AAPL") must beSome.which(_.Name == "Apple Inc")
     }
-    "return a id not found response for GET requests to the api/users/badid path" in {
-      testService(HttpRequest(GET, "/api/users/badid")) {
-        restService
-      }.response.content.as[String] must new ResultMatcher(resultCodes.idNotFound)
+    "return nothing for the query xqzrp" in {
+      MarkitApi.quote("xqzrp") must beNone
     }
-    "return a duplicate id response for PUT requests to the api/users/testid path" in {
-      testService(HttpRequest(PUT, "/api/users/testid")) {
-        restService
-      }.response.content.as[String] must new ResultMatcher(resultCodes.duplicateId)
+    "return some for timeseries GOOG" in {
+      MarkitApi.timeSeries("GOOG", 100) must beSome
     }
-    "return a success response for PUT requests to the api/users/dummyid path" in {
-      testService(HttpRequest(PUT, "/api/users/dummyid")) {
-        restService
-      }.response.content.as[String] must new ResultMatcher(resultCodes.success)
+    "return some with duration matching for F" in {
+      MarkitApi.timeSeries("F", 20) must beSome.which(_.SeriesDuration == 20) //anything between 11 and 19 seems to crash
     }
-    "return a success response for DELETE requests to the api/users/dummyid path" in {
-      testService(HttpRequest(DELETE, "/api/users/dummyid")) {
-        restService
-      }.response.content.as[String] must new ResultMatcher(resultCodes.success)
-    }
-    "leave GET requests to other paths unhandled" in {
-      testService(HttpRequest(GET, "/kermit")) {
-        restService
-      }.handled must beFalse
+    "return some with open having values for BA" in {
+      MarkitApi.timeSeries("BA", 100) must beSome.which(_.Series.open.values.length > 0 )
     }
   }
 

@@ -7,12 +7,12 @@ import Keys._
 object Build extends sbt.Build {
   import Dependencies._
 
-  lazy val myProject = Project("LQRest", file("."))
+  lazy val myProject = Project("MarkitScala", file("."))
     .settings(WebPlugin.webSettings: _*)
     .settings(port in config("container") := 8080)
     .settings(
-      organization  := "com.example",
-      version       := "0.9.0",
+      organization  := "com.webwino",
+      version       := "0.1.0",
       scalaVersion  := "2.9.1",
       scalacOptions := Seq("-deprecation", "-encoding", "utf8"),
       resolvers     ++= Dependencies.resolutionRepos,
@@ -42,9 +42,9 @@ object Dependencies {
   )
 
   object V {
-    val akka    = "1.3.1"
-    val sprayServer   = "0.9.0"
-    val sprayCan = "0.9.3"
+    val akka    = "2.0"
+    val sprayServer   = "1.0-M1"
+    val sprayCan = "1.0-M1"
     val specs2  = "1.7.1"
     val jetty   = "8.1.0.v20120127"
     val slf4j   = "1.6.4"
@@ -57,7 +57,7 @@ object Dependencies {
   }
 
   object Compile {
-    val akkaActor   = "se.scalablesolutions.akka" %  "akka-actor"      % V.akka        % "compile"
+    val akkaActor   = "com.typesafe.akka"         %  "akka-actor"      % V.akka        % "compile"
     val sprayServer = "cc.spray"                  %  "spray-server"    % V.sprayServer % "compile"
     val sprayCan    = "cc.spray"                  %  "spray-can"       % V.sprayCan    % "compile"
     val jodaTime    = "joda-time"                 %  "joda-time"       % V.jodaTime    % "compile"
@@ -73,7 +73,7 @@ object Dependencies {
 
   object Container {
     val jettyWebApp = "org.eclipse.jetty"         %  "jetty-webapp"    % V.jetty   % "container"
-    val akkaSlf4j   = "se.scalablesolutions.akka" %  "akka-slf4j"      % V.akka
+    val akkaSlf4j   = "com.typesafe.akka"         %  "akka-slf4j"      % V.akka
     val slf4j       = "org.slf4j"                 %  "slf4j-api"       % V.slf4j
     val logback     = "ch.qos.logback"            %  "logback-classic" % V.logback
   }

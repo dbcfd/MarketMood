@@ -5,21 +5,30 @@ import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.Imports._
 
 import com.webwino.mongo.Mongo
-import net.liftweb.json._
+import org.joda.time.DateTime
+
+class PriceData(date:DateTime, open:Double, high:Double, low:Double, close:Double)
 
 /**
  * Wrapper around the database object for each company
  * @param dbObject Mongo object to create wrapper from
  */
 class Company(val dbObject:MongoDBObject) {
-  def this(sym:String, name:String, exchanges:List[String}) = this(MongoDBObject(
+  def this(sym:String, name:String, exchanges:List[String]) = this(MongoDBObject(
     "symbol" -> sym,
     "companyName" -> name,
     "exchanges" -> exchanges
   ))
+  def this(sym:String, name:String, exchanges:List[String], historical:List[PriceData]) = this(MongoDBObject(
+    "symbol" -> sym,
+    "companyName" -> name,
+    "exchanges" -> exchanges,
+    "historical" -> historical
+  ))
   def symbol:String = dbObject.as[String]("symbol")
   def companyName:String = dbObject.as[String]("companyName")
   def exchanges:List[String] = dbObject.as[List[String]]("exchanges")
+  def historical:List[PriceData] = dbObject.as[List[PriceData]]("historical")
   def id:ObjectId = dbObject.as[ObjectId]("_id")
 }
 
@@ -33,22 +42,20 @@ object Company {
    * Get all possible companies in the database
    * @return
    */
-  def getAllCompanies():List[(String,String)] = {
+  def getAllCompanies():List[Company] = {
     val findAll = MongoDBObject("_id" -> 1)
-    val companies = collection.find(findAll)
-    companies map ( (obj:DBObject) => new Company(obj))
+    collection.find(findAll)
+    for(x <- collection toList ) yield (new Company(x))
   }
   
-  def queryBySymbol(symbol:String):List[(String,String)] = {
-    val q = "symbol" $like symbol
-    val companies = collection.find(q))
-    companies map ( (obj:DBObject) => new Company(obj))
+  def queryBySymbol(symbol:String):List[Company] = {
+    collection.find(MongoDBObject("symbol" -> (".*" + symbol + ".*").r))
+    for(x <- collection toList ) yield (new Company(x))
   }
 
-  def queryByCompanyName(name:String):List[(String,String)] = {
-    val q = "name" $like symbol
-    val companies = collection.find(q))
-    companies map ( (obj:DBObject) => new Company(obj))
+  def queryByCompanyName(name:String):List[Company] = {
+    collection.find(MongoDBObject("name" -> (".*" + name + ".*").r ))
+    for(x <- collection toList ) yield (new Company(x))
   }
 
   /**
