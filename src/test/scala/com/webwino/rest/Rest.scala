@@ -13,6 +13,12 @@ import scala.util.matching.Regex
 
 class RestServiceSpec extends Specification with SprayTest with Rest {
   val codeResultParser = new Regex(""".*\"resultCode\"[.]*?:[.]*?(\d+).*""")
+  val company = ("symbol" -> "SOMEBADSYMBOL") ~
+    ("companyName" -> "a test company") ~
+    ("exchanges" -> (
+      "NYSE",
+      "NASDAQ"
+      ))
 
   "The RestService" should {
     "return a greeting for GET requests to the test path" in {
@@ -20,39 +26,36 @@ class RestServiceSpec extends Specification with SprayTest with Rest {
         restService
       }.response.content.as[String] mustEqual Right("Simple REST Service Test")
     }
-    /**
-    "return a success code response for GET requests to the api/search patch" in {
-      testService(HttpRequest(GET, "/api/search")) {
+    "return a success code response for GET requests to the api/search path" in {
+      testService(HttpRequest(GET, "/api/company")) {
         restService
       }.response.content.as[String] must new CodeResultMatcher(resultCodes.success)
     }
-    "return a success code response and GM JsonObject for GET requests to the api/search/symbol/GM" in {
-      testService(HttpRequest(GET, "/api/search/symbol/GM")) {
+    "return a failure code response for GET requests to the api/company/SOMEBADSYMBOL path" in {
+      testService(HttpRequest(GET, "/api/company/SOMEBADSYMBOL")) {
         restService
-      }.response.content.as[String] must new JsonResultMatcher(
-        ("resultCode" -> 200) ~
-          ("symbol" -> "GM") ~
-          ("exchanges" ->(
-            "NYSE",
-            "BATS Trading Inc"
-            )) ~
-          ("companyName" -> "General Motors")
-      )
+      }.response.content.as[String] must new CodeResultMatcher(resultCodes.failure)
     }
-    "return a success code response and GM JsonObject for GET requests to the api/search/company/lithia" in {
-      testService(HttpRequest(GET, "/api/search/company/lithia")) {
+    "return a success code response for PUT requests to the api/company/SOMEBADSYMBOL path" in {
+      testService(HttpRequest(PUT, "/api/company/SOMEBADSYMBOL", Nil, Some(HttpContent(compact(render(company)))))) {
         restService
-      }.response.content.as[String] must new JsonResultMatcher(
-        ("resultCode" -> 200) ~
-          ("symbol" -> "LAD") ~
-          ("exchanges" ->(
-            "NYSE",
-            "BATS Trading Inc"
-            )) ~
-          ("companyName" -> "Lithia Motors Inc")
-      )
+      }.response.content.as[String] must new CodeResultMatcher(resultCodes.success)
     }
-     **/
+    "return a success code response for GET requests to the api/company/SOMEBADSYMBOL path" in {
+      testService(HttpRequest(GET, "/api/company/SOMEBADSYMBOL")) {
+        restService
+      }.response.content.as[String] must new CodeResultMatcher(resultCodes.success)
+    }
+    "return a success code response for GET requests to the api/company/name=test path" in {
+      testService(HttpRequest(GET, "/api/company/name=test")) {
+        restService
+      }.response.content.as[String] must new CodeResultMatcher(resultCodes.success)
+    }
+    "return a failure code response for DELETE requests to the api/company/SOMEBADSYMBOL path" in {
+      testService(HttpRequest(DELETE, "/api/company/SOMEBADSYMBOL")) {
+        restService
+      }.response.content.as[String] must new CodeResultMatcher(resultCodes.success)
+    }
   }
 
   class JsonResultMatcher(val expJObj: JObject) extends Matcher[Either[DeserializationError, String]] {
