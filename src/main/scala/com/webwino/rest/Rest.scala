@@ -69,7 +69,7 @@ trait Rest extends Directives {
                 case None => getCompanyUsingSymbol(token, ctx)
               }
             }
-          }
+          } ~
           put {
             ctx => {
               //check if we're doing a query
@@ -78,7 +78,7 @@ trait Rest extends Directives {
                 case None => putCompanyUsingSymbol(token, ctx)
               }
             }
-          }
+          } ~
           delete {
             ctx => {
               deleteCompany(token, ctx)
@@ -157,14 +157,14 @@ trait Rest extends Directives {
         ctx.request.content match {
           //see if the data was sent over to put a company manually
           case Some(content) => {
-            val jsVal = parse(new String(content.buffer) )
+            val jsVal = parse(new String(content.buffer))
             val company = Company.toDb(jsVal)
             val resultDSL = (
               ("resultCode" -> resultCodes.success) ~
                 ("companies" -> (
                   (company.symbol -> company.companyName)
                   )
-                )
+                  )
               )
             ctx.complete(compact(render(resultDSL)))
           }

@@ -51,7 +51,7 @@ object MarkitApi {
       case Some(eitherResponse) => eitherResponse match {
         case Right(response) => {
           val responseString = new String(response.body)
-          log.debug(responseString)
+          //log.debug(responseString)
           try {
             val rspJson: JValue = parse (responseString)
             handle(rspJson)

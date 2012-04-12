@@ -15,7 +15,7 @@ class RestServiceSpec extends Specification with SprayTest with Rest {
   val codeResultParser = new Regex(""".*\"resultCode\"[.]*?:[.]*?(\d+).*""")
   val company = ("symbol" -> "SOMEBADSYMBOL") ~
     ("companyName" -> "a test company") ~
-    ("exchanges" -> (
+    ("exchanges" -> List(
       "NYSE",
       "NASDAQ"
       ))
@@ -34,7 +34,7 @@ class RestServiceSpec extends Specification with SprayTest with Rest {
     "return a failure code response for GET requests to the api/company/SOMEBADSYMBOL path" in {
       testService(HttpRequest(GET, "/api/company/SOMEBADSYMBOL")) {
         restService
-      }.response.content.as[String] must new CodeResultMatcher(resultCodes.failure)
+      }.response.content.as[String] must new CodeResultMatcher(resultCodes.noMatchesForSearch)
     }
     "return a success code response for PUT requests to the api/company/SOMEBADSYMBOL path" in {
       testService(HttpRequest(PUT, "/api/company/SOMEBADSYMBOL", Nil, Some(HttpContent(compact(render(company)))))) {
@@ -51,7 +51,7 @@ class RestServiceSpec extends Specification with SprayTest with Rest {
         restService
       }.response.content.as[String] must new CodeResultMatcher(resultCodes.success)
     }
-    "return a failure code response for DELETE requests to the api/company/SOMEBADSYMBOL path" in {
+    "return a success code response for DELETE requests to the api/company/SOMEBADSYMBOL path" in {
       testService(HttpRequest(DELETE, "/api/company/SOMEBADSYMBOL")) {
         restService
       }.response.content.as[String] must new CodeResultMatcher(resultCodes.success)
