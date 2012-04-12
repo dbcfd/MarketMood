@@ -45,22 +45,22 @@ trait Rest extends Directives {
 
               companies match {
                 case Nil => {
-                  completeWith {
                     //No matches in our database, use the markit api for lookup, filtering matches by company name
-                    val possibles = MarkitApi.lookup(token) filter (_.Symbol contains token)
-                    MarkitActor sendMessage (new RetrieveBySymbolList(possibles))
-                    //use the Markit API for lookup
-                    val companiesBySymbol = possibles groupBy (_.Symbol) toList
-                    val uniqueCompanies = companiesBySymbol map (_._2.head)
-                    val sortedUniqueCompanies = uniqueCompanies sortWith ((e1, e2) => e1.Symbol < e2.Symbol)
-                    val companyList = sortedUniqueCompanies map ((res: LookupResult) => (res.Symbol -> res.Name))
-                    //create a dsl representing
-                    val resultDSL = (
-                      ("resultCode" -> resultCodes.success) ~
+                    MarkitApi.lookup(token, (allSymbols:List[LookupResult]) => {
+                      val possibles = allSymbols filter (_.Symbol contains token)
+                      MarkitActor sendMessage (new RetrieveBySymbolList(possibles))
+                      //use the Markit API for lookup
+                      val companiesBySymbol = possibles groupBy (_.Symbol) toList
+                      val uniqueCompanies = companiesBySymbol map (_._2.head)
+                      val sortedUniqueCompanies = uniqueCompanies sortWith ((e1, e2) => e1.Symbol < e2.Symbol)
+                      val companyList = sortedUniqueCompanies map ((res: LookupResult) => (res.Symbol -> res.Name))
+                      //create a dsl representing
+                      val resultDSL = (
+                        ("resultCode" -> resultCodes.success) ~
                         ("companies" -> companyList)
-                      )
-                    compact(render(resultDSL))
-                  }
+                        )
+                      ctx.complete(compact(render(resultDSL)))
+                    } )
                 }
                 case _ => {
                   val companyList = companies map ((company: Company) => (company.symbol -> company.companyName))
@@ -84,9 +84,9 @@ trait Rest extends Directives {
 
               companies match {
                 case Nil => {
-                  completeWith {
                     //No matches in our database, use the markit api for lookup, filtering matches by company name
-                    val possibles = MarkitApi.lookup(token) filter (_.Name contains token)
+                  MarkitApi.lookup(token, (allSymbols:List[LookupResult]) => {
+                    val possibles = allSymbols filter (_.Name contains token)
                     MarkitActor sendMessage (new RetrieveBySymbolList(possibles))
                     val companiesBySymbol = possibles groupBy (_.Symbol) toList
                     val uniqueCompanies = companiesBySymbol map (_._2.head)
@@ -97,8 +97,8 @@ trait Rest extends Directives {
                       ("resultCode" -> resultCodes.success) ~
                         ("companies" -> companyList)
                       )
-                    compact(render(resultDSL))
-                  }
+                    ctx.complete(compact(render(resultDSL)))
+                  } )
                 }
                 case _ => {
                   val companyList = companies map ((company: Company) => (company.symbol -> company.companyName))
