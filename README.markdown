@@ -1,24 +1,42 @@
-## Markit API Test
+## Market Mood
 
-Test of the Markit API.
+Tool to examine market mood
 
-Current supported methods:
+/api/company
 
-/api/company - retrieves all companies currently in clone database
-
- * GET - retreival
- 
-/api/company/:symbol - retrieves information about a company with symbol
-
- * GET - retrieval, if no company in clone, will look at markit database
+ * GET - retrieval
+  * retrieve all companies in database
  * PUT - creation
   * content has json - create from json
-  * content is empty - create from markit lookup
- * DELETE - delete from clone database
  
-/api/company/name=:name - retrieves information about all companies with name information matching
+/api/company/:id
 
- * GET - retrieval, if no companies in clone, look at markit
+ * GET - retrieval using identifier
+ * POST - update company information
+  * content has json to update company
+ * DELETE - delete using identifier
+
+/api/company/:id/analysis
+ * GET - retrieve current analysis information
+  * PUT - start analyzing information about a company
+  * content has json to describe how to analyze (see analysis)
+ * PUT - update analysis settings
+  * content has json to describe how to analyze (see analysis)
+ * DELETE - stop analysis for company
  
-/api/company/:symbol/SeriesData?start=:start+end=:end
- * GET - retrieve time series information (not implemented)
+/api/company/:id/notification/:email
+ * GET - retrieve email settings email in notification list
+ * PUT - add an e-mail to notification list for company
+  * content has json to describe notification settings (see notification)
+ * POST - update notification settings
+  * content has json to describe notification settings (see notification)
+ * DELETE - remove email for notification list
+
+## Company information
+Describes parameters for updating company information
+
+## Analysis
+Describes parameters for starting a stock analysis
+
+## Notification
+Describes parameters for receiving notification about company
