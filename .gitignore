@@ -1,0 +1,7 @@
+#ignore everything
+*
+#except
+!project
+!src
+!README.markdown
+!.gitignore
