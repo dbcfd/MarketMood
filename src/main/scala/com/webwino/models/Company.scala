@@ -3,47 +3,23 @@ package com.webwino.models
 import org.bson.types.ObjectId
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.Imports._
-import net.liftweb.json._
 
 import com.webwino.mongo.Mongo
 import org.joda.time.DateTime
-
-case class PriceData(date: DateTime, open: Double, high: Double, low: Double, close: Double)
-
-case class CompanyData(symbol: String, companyName: String, exchanges: List[String])
+import net.liftweb.json._
 
 /**
  * Wrapper around the database object for each company
  * @param dbObject Mongo object to create wrapper from
  */
 class Company(val dbObject: MongoDBObject) {
-  def this(data: CompanyData) = this(MongoDBObject(
-    "symbol" -> data.symbol,
-    "companyName" -> data.companyName,
-    "exchanges" -> data.exchanges
+  def this(symbols:List[String], names:List[String]) = this(MongoDBObject(
+    "symbols" -> symbols,
+    "names" -> names
   ))
 
-  def this(sym: String, name: String, exchanges: List[String]) = this(MongoDBObject(
-    "symbol" -> sym,
-    "companyName" -> name,
-    "exchanges" -> exchanges
-  ))
-
-  def this(sym: String, name: String, exchanges: List[String], historical: List[PriceData]) = this(MongoDBObject(
-    "symbol" -> sym,
-    "companyName" -> name,
-    "exchanges" -> exchanges,
-    "historical" -> historical
-  ))
-
-  def symbol: String = dbObject.as[String]("symbol")
-
-  def companyName: String = dbObject.as[String]("companyName")
-
-  def exchanges: List[String] = dbObject.as[List[String]]("exchanges")
-
-  def historical: List[PriceData] = dbObject.as[List[PriceData]]("historical")
-
+  def names: List[String] = dbObject.as[List[String]]("names")
+  def symbols: List[String] = dbObject.as[List[String]]("symbols")
   def id: ObjectId = dbObject.as[ObjectId]("_id")
 }
 
@@ -66,12 +42,7 @@ object Company {
   }
 
   def queryBySymbol(symbol: String): List[Company] = {
-    collection.find(MongoDBObject("symbol" -> (".*" + symbol + ".*").r))
-    for (x <- collection toList) yield (new Company(x))
-  }
-
-  def queryByCompanyName(name: String): List[Company] = {
-    collection.find(MongoDBObject("name" -> (".*" + name + ".*").r))
+    collection.find(MongoDBObject("symbols" -> (".*" + symbol + ".*").r))
     for (x <- collection toList) yield (new Company(x))
   }
 
@@ -81,7 +52,7 @@ object Company {
    * @return
    */
   def fromDb(symbol: String): Option[Company] = {
-    val dbUser: MongoDBObject = MongoDBObject("symbol" -> symbol)
+    val dbUser: MongoDBObject = MongoDBObject("symbols" -> symbol)
     val found = collection.findOne(dbUser)
     found match {
       case Some(obj: DBObject) => ({
@@ -95,13 +66,6 @@ object Company {
     collection.save(company)
   }
 
-  def toDb(jsVal:JValue):Company = {
-    val data = jsVal.extract[CompanyData]
-    val company = new Company(data)
-    toDb(company.dbObject)
-    company
-  }
-
   def delete(company: MongoDBObject) = {
     collection.remove(company)
   }
@@ -112,4 +76,29 @@ object Company {
   implicit def dbToCompany(dbObj: MongoDBObject): Company = new Company(dbObj)
 
   implicit def companyToDb(obj: Company): MongoDBObject = obj.dbObject
+
+  implicit def jsonStringToCompany(jsonString:String): Company = {
+    val jsonObj = JsonParser.parse(jsonString)
+    jsonToCompany(jsonObj)
+  }
+
+  implicit def jsonToCompany(json:JValue): Company = {
+    new Company(
+      (json \ "symbols").extract[List[String]],
+      (json \ "names").extract[List[String]]
+        )
+  }
+
+  implicit def companyToJson(obj: Company): JValue = {
+    val json = JObject(List(
+      JField("symbols", JArray(obj.symbols map (JString(_)))),
+      JField("names", JArray(obj.symbols map (JString(_)))),
+      JField("id", JString(obj.id.toString))
+    ))
+    json
+  }
+
+  implicit def companyToJsonString(obj: Company): String = {
+    compact(render(companyToJson(obj)))
+  }
 }

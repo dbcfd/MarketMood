@@ -1,0 +1,46 @@
+Company
+
+{
+	id
+	symbols []
+	names []
+	notificationList [user:id]
+}
+
+Users
+{
+	id
+	parameters []
+	{
+		company:id
+		param1:double
+	}
+}
+
+CompanyNews
+{
+	id
+	company:id
+	news []
+	{
+		date:jodadate
+		address:string (http)
+		mood:string
+	}
+}
+
+MarketInformation
+{
+	id
+	company:id
+	information []
+	{
+		date:jodadate
+		high:double
+		low:double
+		close:double
+		open:double
+		volume:double
+	}
+}
+	
