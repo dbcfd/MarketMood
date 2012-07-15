@@ -21,6 +21,14 @@ class Company(val dbObject: MongoDBObject) {
   def names: List[String] = dbObject.as[List[String]]("names")
   def symbols: List[String] = dbObject.as[List[String]]("symbols")
   def id: ObjectId = dbObject.as[ObjectId]("_id")
+
+  override implicit def toString():String = {
+    Company.companyToJsonString(this)
+  }
+
+  implicit def toJson():JValue = {
+    Company.companyToJson(this)
+  }
 }
 
 /**

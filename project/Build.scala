@@ -47,7 +47,7 @@ object Dependencies {
     val sprayServer   = "1.0-M2"
     val sprayCan = "1.0-M2"
 	val sprayClient = "1.0-M2"
-    val specs2  = "1.7.1"
+    val specs2  = "1.11"
     val jetty   = "8.1.0.v20120127"
     val slf4j   = "1.6.4"
     val logback = "1.0.0"

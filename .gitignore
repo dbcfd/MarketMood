@@ -1,7 +1,4 @@
 #ignore everything
-*
-#except
-!project
-!src
-!README.markdown
-!.gitignore
+.idea
+.idea_modules
+target
